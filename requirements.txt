@@ -1,6 +1,11 @@
-tensorflow 
-scikit-learn 
-opencv-python 
-matplotlib 
-seaborn 
+torch
+torchvision
+torchaudio
+numpy
+pandas
+matplotlib
+seaborn
+scikit-learn
 tqdm
+Pillow
+opencv-python

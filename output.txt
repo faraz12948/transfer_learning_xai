@@ -1,0 +1,29 @@
+====================
+Running config: deepseek_code_7b
+====================
+Epoch [1/12] Loss: 0.8292 Acc: 63.35%
+Epoch [2/12] Loss: 0.4339 Acc: 82.26%
+Epoch [3/12] Loss: 0.2284 Acc: 91.28%
+Epoch [4/12] Loss: 0.1499 Acc: 95.00%
+Epoch [5/12] Loss: 0.0966 Acc: 96.77%
+Epoch [6/12] Loss: 0.0806 Acc: 97.15%
+Epoch [7/12] Loss: 0.0684 Acc: 97.60%
+Epoch [8/12] Loss: 0.0764 Acc: 97.47%
+Epoch [9/12] Loss: 0.0558 Acc: 98.04%
+Epoch [10/12] Loss: 0.0447 Acc: 98.70%
+Epoch [11/12] Loss: 0.0682 Acc: 97.67%
+Epoch [12/12] Loss: 0.0241 Acc: 99.20%
+Training time for deepseek_code_7b: 3307.85 seconds
+                  precision    recall  f1-score   support
+
+    MildDemented       1.00      0.92      0.96        98
+ModerateDemented       1.00      1.00      1.00        11
+     NonDemented       0.98      1.00      0.99       315
+VeryMildDemented       0.97      0.98      0.97       216
+
+        accuracy                           0.98       640
+       macro avg       0.99      0.97      0.98       640
+    weighted avg       0.98      0.98      0.98       640
+
+/home/faraz/Documents/Study/alzheimer_transfer_learning_xai/main.py:247: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
