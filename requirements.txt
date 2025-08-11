@@ -1,6 +1,10 @@
-tensorflow 
-scikit-learn 
-opencv-python 
-matplotlib 
-seaborn 
+torch
+torchvision
+torchaudio
+numpy
+opencv-python
+matplotlib
+seaborn
 tqdm
+scikit-learn
+#pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
