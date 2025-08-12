@@ -27,3 +27,65 @@ VeryMildDemented       0.97      0.98      0.97       216
 
 /home/faraz/Documents/Study/alzheimer_transfer_learning_xai/main.py:247: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
   plt.show()
+
+====================
+Running config: Random_Search
+====================
+Downloading: "https://download.pytorch.org/models/densenet121-a639ec97.pth" to /home/faraz/.cache/torch/hub/checkpoints/densenet121-a639ec97.pth
+100%|██████████████████████████████████████████████████████████████████████████████████████████████████████| 30.8M/30.8M [00:03<00:00, 10.5MB/s]
+Epoch [1/12] Loss: 0.7640 Acc: 68.47%
+Epoch [2/12] Loss: 0.1879 Acc: 94.50%
+Epoch [3/12] Loss: 0.0389 Acc: 99.25%
+Epoch [4/12] Loss: 0.0139 Acc: 99.90%
+Epoch [5/12] Loss: 0.0155 Acc: 99.69%
+Epoch [6/12] Loss: 0.0402 Acc: 98.78%
+Epoch [7/12] Loss: 0.0503 Acc: 98.28%
+Epoch [8/12] Loss: 0.0338 Acc: 99.01%
+Epoch [9/12] Loss: 0.0122 Acc: 99.69%
+Epoch [10/12] Loss: 0.0168 Acc: 99.53%
+Epoch [11/12] Loss: 0.0048 Acc: 99.91%
+Epoch [12/12] Loss: 0.0037 Acc: 99.97%
+Training time for Random_Search: 6989.15 seconds
+                  precision    recall  f1-score   support
+
+    MildDemented       1.00      0.98      0.99        98
+ModerateDemented       1.00      1.00      1.00        11
+     NonDemented       0.98      1.00      0.99       315
+VeryMildDemented       0.99      0.98      0.98       216
+
+        accuracy                           0.99       640
+       macro avg       0.99      0.99      0.99       640
+    weighted avg       0.99      0.99      0.99       640
+
+/home/faraz/Documents/Study/alzheimer_transfer_learning_xai/main.py:247: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+
+====================
+Running config: Bayesian_Opt
+====================
+Epoch [1/12] Loss: 0.7443 Acc: 68.35%
+Epoch [2/12] Loss: 0.2325 Acc: 91.72%
+Epoch [3/12] Loss: 0.0766 Acc: 97.69%
+Epoch [4/12] Loss: 0.0519 Acc: 98.23%
+Epoch [5/12] Loss: 0.0420 Acc: 98.61%
+Epoch [6/12] Loss: 0.0286 Acc: 99.22%
+Epoch [7/12] Loss: 0.0449 Acc: 98.47%
+Epoch [8/12] Loss: 0.0399 Acc: 98.80%
+Epoch [9/12] Loss: 0.0287 Acc: 99.25%
+Epoch [10/12] Loss: 0.0368 Acc: 98.70%
+Epoch [11/12] Loss: 0.0308 Acc: 98.99%
+Epoch [12/12] Loss: 0.0193 Acc: 99.43%
+Training time for Bayesian_Opt: 5935.16 seconds
+                  precision    recall  f1-score   support
+
+    MildDemented       1.00      0.98      0.99        98
+ModerateDemented       1.00      1.00      1.00        11
+     NonDemented       0.98      1.00      0.99       315
+VeryMildDemented       0.99      0.98      0.98       216
+
+        accuracy                           0.99       640
+       macro avg       0.99      0.99      0.99       640
+    weighted avg       0.99      0.99      0.99       640
+
+/home/faraz/Documents/Study/alzheimer_transfer_learning_xai/main.py:247: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
