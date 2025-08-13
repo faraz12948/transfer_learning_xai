@@ -10,6 +10,8 @@ from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.utils import shuffle
+from lime import lime_image
+from skimage.segmentation import mark_boundaries
 
 import torch
 import torch.nn as nn
@@ -260,4 +262,49 @@ for name, config in configs.items():
     plt.ylabel("True")
     plt.tight_layout()
     plt.savefig(os.path.join(fig_dir, f"confusion_matrix_{name}.png"))
+    plt.close()
+    
+# ===============================
+# XAI with LIME
+# ===============================
+explainer = lime_image.LimeImageExplainer()
+
+def predict_fn(images):
+    base_model.eval()
+    batch = torch.stack([transform(img) for img in images], dim=0).to(DEVICE)
+    with torch.no_grad():
+        outputs = base_model(batch)
+        probs = torch.softmax(outputs, dim=1).cpu().numpy()
+    return probs
+
+# Pick a few test samples to explain
+num_explanations = 5
+os.makedirs(os.path.join(fig_dir, "lime"), exist_ok=True)
+
+for idx in range(num_explanations):
+    img_np = X_test[idx]
+    label_idx = y_test_idx[idx]
+    label_name = y_test[idx]
+
+    explanation = explainer.explain_instance(
+        img_np,
+        predict_fn,
+        top_labels=1,
+        hide_color=0,
+        num_samples=1000
+    )
+
+    temp, mask = explanation.get_image_and_mask(
+        explanation.top_labels[0],
+        positive_only=False,
+        num_features=10,
+        hide_rest=False
+    )
+
+    plt.figure(figsize=(5, 5))
+    plt.imshow(mark_boundaries(temp / 255.0, mask))
+    plt.title(f"LIME Explanation - True: {label_name}")
+    plt.axis("off")
+    plt.tight_layout()
+    plt.savefig(os.path.join(fig_dir, "lime", f"lime_{idx}_{label_name}.png"))
     plt.close()

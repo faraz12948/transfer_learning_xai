@@ -9,3 +9,5 @@ scikit-learn
 tqdm
 Pillow
 opencv-python
+lime
+scikit-image
