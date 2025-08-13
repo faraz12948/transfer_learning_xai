@@ -89,3 +89,38 @@ VeryMildDemented       0.99      0.98      0.98       216
 
 /home/faraz/Documents/Study/alzheimer_transfer_learning_xai/main.py:247: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
   plt.show()
+
+
+
+
+
+  New output:
+
+  ====================
+Running config: Random_Search
+====================
+[INFO] Training model for Random_Search...
+Epoch [1/12] Loss: 0.8256 Acc: 65.26%
+Epoch [2/12] Loss: 0.2103 Acc: 93.63%
+Epoch [3/12] Loss: 0.0507 Acc: 99.03%
+Epoch [4/12] Loss: 0.0249 Acc: 99.58%
+Epoch [5/12] Loss: 0.0132 Acc: 99.72%
+Epoch [6/12] Loss: 0.0104 Acc: 99.86%
+Epoch [7/12] Loss: 0.0209 Acc: 99.39%
+Epoch [8/12] Loss: 0.0649 Acc: 97.92%
+Epoch [9/12] Loss: 0.0406 Acc: 98.75%
+Epoch [10/12] Loss: 0.0141 Acc: 99.60%
+Epoch [11/12] Loss: 0.0147 Acc: 99.62%
+Epoch [12/12] Loss: 0.0111 Acc: 99.72%
+Training time for Random_Search: 6486.97 seconds
+[INFO] Saved model for Random_Search to saved_models/Random_Search.pth
+                  precision    recall  f1-score   support
+
+    MildDemented       0.99      0.99      0.99        98
+ModerateDemented       1.00      0.91      0.95        11
+     NonDemented       0.99      0.99      0.99       315
+VeryMildDemented       0.98      0.99      0.99       216
+
+        accuracy                           0.99       640
+       macro avg       0.99      0.97      0.98       640
+    weighted avg       0.99      0.99      0.99       640

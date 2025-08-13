@@ -48,6 +48,15 @@ X = np.array(X)
 y = np.array(y)
 
 # Preview images
+# ===============================
+# Additions for saving/loading models and figures
+# ===============================
+model_dir = "saved_models"
+fig_dir = "saved_figures"
+os.makedirs(model_dir, exist_ok=True)
+os.makedirs(fig_dir, exist_ok=True)
+
+# Save preview images instead of showing
 fig, axes = plt.subplots(len(labels), 4, figsize=(12, len(labels) * 3))
 for i, label in enumerate(labels):
     indices = np.where(y == label)[0]
@@ -58,7 +67,8 @@ for i, label in enumerate(labels):
         ax.set_title(label)
         ax.axis("off")
 plt.tight_layout()
-plt.show()
+plt.savefig(os.path.join(fig_dir, "preview_images.png"))
+plt.close()
 
 # Shuffle
 X, y = shuffle(X, y, random_state=1)
@@ -112,15 +122,15 @@ test_dataset = AlzheimerDataset(X_test, y_test_idx, transform=transform)
 # Model configs
 # ===============================
 configs = {
-    "deepseek_code_7b": {
-        "model_name": "efficientnet_b0",
-        "lr": 0.001,
-        "batch_size": 64,
-        "dropout_rate": 0.5,
-        "dense_units": 1536,
-        "optimizer": "adam",
-        "trainable_layers": "last_30"
-    },
+    # "deepseek_code_7b": {
+    #     "model_name": "efficientnet_b0",
+    #     "lr": 0.001,
+    #     "batch_size": 64,
+    #     "dropout_rate": 0.5,
+    #     "dense_units": 1536,
+    #     "optimizer": "adam",
+    #     "trainable_layers": "last_30"
+    # },
     "Random_Search": {
         "model_name": "densenet121",
         "lr": 1e-4,
@@ -129,16 +139,17 @@ configs = {
         "dense_units": 1024,
         "optimizer": "adam",
         "trainable_layers": "all"
-    },
-    "Bayesian_Opt": {
-        "model_name": "densenet121",
-        "lr": 0.0001,
-        "batch_size": 32,
-        "dropout_rate": 0.5,
-        "dense_units": 1536,
-        "optimizer": "adam",
-        "trainable_layers": "all"
     }
+    ,
+    # "Bayesian_Opt": {
+    #     "model_name": "densenet121",
+    #     "lr": 0.0001,
+    #     "batch_size": 32,
+    #     "dropout_rate": 0.5,
+    #     "dense_units": 1536,
+    #     "optimizer": "adam",
+    #     "trainable_layers": "all"
+    # }
 }
 
 # Model dict
@@ -152,6 +163,7 @@ model_dict = {
 # ===============================
 for name, config in configs.items():
     print(f"\n{'='*20}\nRunning config: {name}\n{'='*20}")
+    model_path = os.path.join(model_dir, f"{name}.pth")
 
     # Load base model
     base_model = model_dict[config["model_name"]](weights="IMAGENET1K_V1")
@@ -165,8 +177,6 @@ for name, config in configs.items():
         num_features = base_model.fc.in_features
     else:
         raise AttributeError("Base model has no classifier or fc attribute.")
-
-
     # Freeze layers if needed
     if config["trainable_layers"] == "none":
         for param in base_model.parameters():
@@ -189,40 +199,44 @@ for name, config in configs.items():
         nn.Dropout(config["dropout_rate"]),
         nn.Linear(config["dense_units"], len(unique_labels))
     )
-
     base_model = base_model.to(DEVICE)
-
     # Optimizer
     optimizer = optim.Adam(base_model.parameters(), lr=config["lr"]) if config["optimizer"] == "adam" else optim.SGD(base_model.parameters(), lr=config["lr"], momentum=0.9)
     criterion = nn.CrossEntropyLoss()
-
     # DataLoaders
     train_loader = DataLoader(train_dataset, batch_size=config["batch_size"], shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=config["batch_size"], shuffle=False)
 
-    # Train
-    start_time = time.time()
-    base_model.train()
-    for epoch in range(12):
-        running_loss = 0.0
-        correct = 0
-        total = 0
-        for imgs, labels in train_loader:
-            imgs, labels = imgs.to(DEVICE), labels.to(DEVICE)
-            optimizer.zero_grad()
-            outputs = base_model(imgs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
+    # If saved model exists, load it; else train
+    if os.path.exists(model_path):
+        print(f"[INFO] Loading saved model for {name} from {model_path}")
+        base_model.load_state_dict(torch.load(model_path, map_location=DEVICE))
+    else:
+        print(f"[INFO] Training model for {name}...")
+        start_time = time.time()
+        base_model.train()
+        for epoch in range(12):
+            running_loss = 0.0
+            correct = 0
+            total = 0
+            for imgs, labels in train_loader:
+                imgs, labels = imgs.to(DEVICE), labels.to(DEVICE)
+                optimizer.zero_grad()
+                outputs = base_model(imgs)
+                loss = criterion(outputs, labels)
+                loss.backward()
+                optimizer.step()
 
-            running_loss += loss.item() * imgs.size(0)
-            _, predicted = outputs.max(1)
-            total += labels.size(0)
-            correct += predicted.eq(labels).sum().item()
+                running_loss += loss.item() * imgs.size(0)
+                _, predicted = outputs.max(1)
+                total += labels.size(0)
+                correct += predicted.eq(labels).sum().item()
 
-        print(f"Epoch [{epoch+1}/12] Loss: {running_loss/len(train_loader.dataset):.4f} Acc: {100.*correct/total:.2f}%")
+            print(f"Epoch [{epoch+1}/12] Loss: {running_loss/len(train_loader.dataset):.4f} Acc: {100.*correct/total:.2f}%")
 
-    print(f"Training time for {name}: {time.time() - start_time:.2f} seconds")
+        print(f"Training time for {name}: {time.time() - start_time:.2f} seconds")
+        torch.save(base_model.state_dict(), model_path)
+        print(f"[INFO] Saved model for {name} to {model_path}")
 
     # Eval
     base_model.eval()
@@ -239,9 +253,11 @@ for name, config in configs.items():
     print(classification_report(all_labels, all_preds, target_names=unique_labels))
     cm = confusion_matrix(all_labels, all_preds)
     plt.figure(figsize=(6, 5))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues_r', xticklabels=unique_labels, yticklabels=unique_labels)
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues_r',
+                xticklabels=unique_labels, yticklabels=unique_labels)
     plt.title(f"Confusion Matrix - {name}")
     plt.xlabel("Predicted")
     plt.ylabel("True")
     plt.tight_layout()
-    plt.show()
+    plt.savefig(os.path.join(fig_dir, f"confusion_matrix_{name}.png"))
+    plt.close()
