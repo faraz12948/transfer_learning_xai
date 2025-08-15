@@ -19,6 +19,8 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 import torchvision.models as models
 import torchvision.transforms as transforms
+import torch.nn.functional as F
+
 
 # ===============================
 # Device setup
@@ -30,6 +32,7 @@ print(f"[INFO] Using device: {DEVICE}")
 # Data loading
 # ===============================
 data_path = "./dataset/OriginalDataset"  # Change this
+# data_path = "./dataset/NewDataset"  # Change this
 labels = ['MildDemented', 'ModerateDemented', 'NonDemented', 'VeryMildDemented']
 valid_extensions = ('.jpg', '.jpeg', '.png')
 image_size = 170
@@ -268,6 +271,7 @@ for name, config in configs.items():
 # XAI with LIME
 # ===============================
 explainer = lime_image.LimeImageExplainer()
+# ===============================
 
 def predict_fn(images):
     base_model.eval()
@@ -281,30 +285,140 @@ def predict_fn(images):
 num_explanations = 5
 os.makedirs(os.path.join(fig_dir, "lime"), exist_ok=True)
 
-for idx in range(num_explanations):
-    img_np = X_test[idx]
-    label_idx = y_test_idx[idx]
-    label_name = y_test[idx]
 
+# ===============================
+# Grad-CAM helper
+# ===============================
+def generate_gradcam(model, img_tensor, target_class):
+    gradients = []
+    activations = []
+
+    def backward_hook(module, grad_input, grad_output):
+        gradients.append(grad_output[0].detach())
+
+    def forward_hook(module, input, output):
+        activations.append(output.detach())
+
+    # Register hooks on the last conv layer
+    last_conv_layer = None
+    for name, module in model.named_modules():
+        if isinstance(module, torch.nn.Conv2d):
+            last_conv_layer = module
+    if last_conv_layer is None:
+        raise RuntimeError("No Conv2d layer found in model for Grad-CAM")
+
+    forward_handle = last_conv_layer.register_forward_hook(forward_hook)
+    backward_handle = last_conv_layer.register_backward_hook(backward_hook)
+
+    # Forward pass
+    output = model(img_tensor)
+    model.zero_grad()
+
+    # Backward pass
+    class_loss = output[0, target_class]
+    class_loss.backward()
+
+    # Get activations & gradients
+    grads = gradients[0]
+    acts = activations[0]
+
+    pooled_grads = torch.mean(grads, dim=[0, 2, 3])
+    for i in range(acts.shape[1]):
+        acts[:, i, :, :] *= pooled_grads[i]
+
+    heatmap = torch.mean(acts, dim=1).squeeze()
+    heatmap = F.relu(heatmap)
+    heatmap /= torch.max(heatmap)
+    heatmap = heatmap.cpu().numpy()
+
+    # Clean up hooks
+    forward_handle.remove()
+    backward_handle.remove()
+
+    return heatmap
+
+# ===============================
+# Static file paths for XAI
+# ===============================
+xai_files = [
+    "./dataset/OriginalDataset/MildDemented/27 (10).jpg",
+    "./dataset/OriginalDataset/MildDemented/27 (11).jpg",
+    "./dataset/OriginalDataset/ModerateDemented/28.jpg",
+    "./dataset/OriginalDataset/VeryMildDemented/26 (46).jpg",
+    "./dataset/OriginalDataset/NonDemented/26 (64).jpg"
+]
+# # Static file paths for XAI
+# # ===============================
+# xai_files = [
+#     "./dataset/OriginalDataset/MildDemented/26 (23).jpg",
+#     "./dataset/OriginalDataset/MildDemented/27 (10).jpg",
+#     "./dataset/OriginalDataset/ModerateDemented/28.jpg",
+#     "./dataset/OriginalDataset/VeryMildDemented/26 (46).jpg",
+#     "./dataset/OriginalDataset/NonDemented/26 (64).jpg"
+# ]
+
+# ===============================
+# Run XAI
+# ===============================
+for idx, file_path in enumerate(xai_files):
+    # Load image
+    img_np = cv2.imread(file_path)
+    img_np = cv2.resize(img_np, (image_size, image_size))
+    img_rgb = cv2.cvtColor(img_np, cv2.COLOR_BGR2RGB)
+
+    # True class from path
+    true_class_name = file_path.split("/")[-2]
+
+    # Predict class
+    probs = predict_fn([img_rgb])
+    pred_class_idx = np.argmax(probs[0])
+    pred_class_name = unique_labels[pred_class_idx]
+
+    # ===== LIME =====
     explanation = explainer.explain_instance(
-        img_np,
+        img_rgb,
         predict_fn,
         top_labels=1,
         hide_color=0,
         num_samples=1000
     )
-
     temp, mask = explanation.get_image_and_mask(
         explanation.top_labels[0],
-        positive_only=False,
+        positive_only=True,
         num_features=10,
         hide_rest=False
     )
+    lime_img = mark_boundaries(temp / 255.0, mask, color=(1, 1, 0))
 
-    plt.figure(figsize=(5, 5))
-    plt.imshow(mark_boundaries(temp / 255.0, mask))
-    plt.title(f"LIME Explanation - True: {label_name}")
-    plt.axis("off")
+    # ===== Grad-CAM =====
+    img_tensor = transform(img_rgb).unsqueeze(0).to(DEVICE)
+    heatmap = generate_gradcam(base_model, img_tensor, pred_class_idx)
+
+    heatmap_resized = cv2.resize(heatmap, (image_size, image_size))
+    heatmap_colored = cv2.applyColorMap(np.uint8(255 * heatmap_resized), cv2.COLORMAP_JET)
+    gradcam_img = cv2.addWeighted(cv2.cvtColor(img_np, cv2.COLOR_BGR2RGB), 0.6, heatmap_colored, 0.4, 0)
+
+    # ===== Save side-by-side =====
+    fig, axs = plt.subplots(1, 3, figsize=(12, 4))
+    axs[0].imshow(img_rgb)
+    axs[0].set_title("Original")
+    axs[0].axis("off")
+
+    axs[1].imshow(lime_img)
+    axs[1].set_title("LIME")
+    axs[1].axis("off")
+
+    axs[2].imshow(gradcam_img)
+    axs[2].set_title("Grad-CAM")
+    axs[2].axis("off")
+
+    fig.suptitle(f"True: {true_class_name} | Pred: {pred_class_name}", fontsize=14)
+    save_path = os.path.join(fig_dir, "lime", f"{idx}_{true_class_name}_pred_{pred_class_name}_gc.png")
     plt.tight_layout()
-    plt.savefig(os.path.join(fig_dir, "lime", f"lime_{idx}_{label_name}.png"))
+    plt.savefig(save_path)
     plt.close()
+
+    print(f"[INFO] Saved: {save_path}")
+
+
+
