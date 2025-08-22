@@ -1,5 +1,5 @@
 
-Dataset:
+Dataset: https://www.kaggle.com/datasets/uraninjo/augmented-alzheimer-mri-dataset/data?select=OriginalDataset
 Output:
 ====================
 Running config: deepseek_code_7b
@@ -147,3 +147,24 @@ VeryMildDemented       0.90      0.76      0.82       389
 
 
 Paper: https://pmc.ncbi.nlm.nih.gov/articles/PMC10855149/
+
+
+
+====================
+Running config: Random_Search
+====================
+[INFO] Training model for Random_Search...
+Epoch [1/12] Train Loss: 0.8481 Acc: 64.18% | Val Loss: 0.4937 Acc: 82.97%
+Epoch [2/12] Train Loss: 0.2384 Acc: 92.93% | Val Loss: 0.2454 Acc: 91.88%
+Epoch [3/12] Train Loss: 0.0505 Acc: 99.12% | Val Loss: 0.1268 Acc: 95.62%
+Epoch [4/12] Train Loss: 0.0172 Acc: 99.82% | Val Loss: 0.0829 Acc: 97.50%
+Epoch [5/12] Train Loss: 0.0063 Acc: 100.00% | Val Loss: 0.0697 Acc: 98.28%
+Epoch [6/12] Train Loss: 0.0108 Acc: 99.75% | Val Loss: 0.1614 Acc: 95.31%
+Epoch [7/12] Train Loss: 0.0172 Acc: 99.67% | Val Loss: 0.1351 Acc: 96.25%
+Epoch [8/12] Train Loss: 0.0569 Acc: 98.16% | Val Loss: 0.5064 Acc: 83.12%
+Epoch [9/12] Train Loss: 0.0791 Acc: 97.01% | Val Loss: 0.3553 Acc: 86.88%
+Epoch [10/12] Train Loss: 0.0290 Acc: 99.12% | Val Loss: 0.0915 Acc: 97.50%
+Epoch [11/12] Train Loss: 0.0124 Acc: 99.71% | Val Loss: 0.1053 Acc: 96.72%
+Epoch [12/12] Train Loss: 0.0054 Acc: 99.94% | Val Loss: 0.0515 Acc: 98.28%
+Training time for Random_Search: 5752.64 seconds
+[INFO] Saved model for Random_Search to saved_models/Random_Search_v2.pth

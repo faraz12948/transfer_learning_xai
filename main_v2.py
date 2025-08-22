@@ -78,15 +78,20 @@ plt.close()
 # Shuffle
 X, y = shuffle(X, y, random_state=1)
 
-# Train/test split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=101)
-print(f"Train shape: {X_train.shape}, Test shape: {X_test.shape}")
+# ===============================
+# Train/val/test split
+# ===============================
+X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=0.2, random_state=101, stratify=y)
+X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=101, stratify=y_temp)
+
+print(f"Train: {X_train.shape}, Val: {X_val.shape}, Test: {X_test.shape}")
 
 # Label encoding
 unique_labels = np.unique(y_train)
 label_to_index = {label: idx for idx, label in enumerate(unique_labels)}
 y_train_idx = np.array([label_to_index[label] for label in y_train])
-y_test_idx = np.array([label_to_index[label] for label in y_test])
+y_val_idx   = np.array([label_to_index[label] for label in y_val])
+y_test_idx  = np.array([label_to_index[label] for label in y_test])
 
 # ===============================
 # Dataset class
@@ -121,7 +126,8 @@ transform = transforms.Compose([
 
 # Dataloaders
 train_dataset = AlzheimerDataset(X_train, y_train_idx, transform=transform)
-test_dataset = AlzheimerDataset(X_test, y_test_idx, transform=transform)
+val_dataset   = AlzheimerDataset(X_val, y_val_idx, transform=transform)
+test_dataset  = AlzheimerDataset(X_test, y_test_idx, transform=transform)
 
 # ===============================
 # Model configs
@@ -168,7 +174,7 @@ model_dict = {
 # ===============================
 for name, config in configs.items():
     print(f"\n{'='*20}\nRunning config: {name}\n{'='*20}")
-    model_path = os.path.join(model_dir, f"{name}.pth")
+    model_path = os.path.join(model_dir, f"{name}_v2.pth")
 
     # Load base model
     base_model = model_dict[config["model_name"]](weights="IMAGENET1K_V1")
@@ -210,7 +216,8 @@ for name, config in configs.items():
     criterion = nn.CrossEntropyLoss()
     # DataLoaders
     train_loader = DataLoader(train_dataset, batch_size=config["batch_size"], shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=config["batch_size"], shuffle=False)
+    val_loader   = DataLoader(val_dataset, batch_size=config["batch_size"], shuffle=False)
+    test_loader  = DataLoader(test_dataset, batch_size=config["batch_size"], shuffle=False)
 
     # If saved model exists, load it; else train
     if os.path.exists(model_path):
@@ -219,11 +226,13 @@ for name, config in configs.items():
     else:
         print(f"[INFO] Training model for {name}...")
         start_time = time.time()
-        base_model.train()
+
+        history = {"train_loss": [], "val_loss": [], "train_acc": [], "val_acc": []}
+
         for epoch in range(12):
-            running_loss = 0.0
-            correct = 0
-            total = 0
+            base_model.train()
+            running_loss, correct, total = 0.0, 0, 0
+
             for imgs, labels in train_loader:
                 imgs, labels = imgs.to(DEVICE), labels.to(DEVICE)
                 optimizer.zero_grad()
@@ -237,11 +246,60 @@ for name, config in configs.items():
                 total += labels.size(0)
                 correct += predicted.eq(labels).sum().item()
 
-            print(f"Epoch [{epoch+1}/12] Loss: {running_loss/len(train_loader.dataset):.4f} Acc: {100.*correct/total:.2f}%")
+            train_loss = running_loss / len(train_loader.dataset)
+            train_acc = 100. * correct / total
+
+            # Validation
+            base_model.eval()
+            val_loss, val_correct, val_total = 0.0, 0, 0
+            with torch.no_grad():
+                for imgs, labels in val_loader:
+                    imgs, labels = imgs.to(DEVICE), labels.to(DEVICE)
+                    outputs = base_model(imgs)
+                    loss = criterion(outputs, labels)
+                    val_loss += loss.item() * imgs.size(0)
+                    _, predicted = outputs.max(1)
+                    val_total += labels.size(0)
+                    val_correct += predicted.eq(labels).sum().item()
+
+            val_loss /= len(val_loader.dataset)
+            val_acc = 100. * val_correct / val_total
+
+            history["train_loss"].append(train_loss)
+            history["val_loss"].append(val_loss)
+            history["train_acc"].append(train_acc)
+            history["val_acc"].append(val_acc)
+
+            print(f"Epoch [{epoch+1}/12] "
+                  f"Train Loss: {train_loss:.4f} Acc: {train_acc:.2f}% | "
+                  f"Val Loss: {val_loss:.4f} Acc: {val_acc:.2f}%")
 
         print(f"Training time for {name}: {time.time() - start_time:.2f} seconds")
         torch.save(base_model.state_dict(), model_path)
         print(f"[INFO] Saved model for {name} to {model_path}")
+
+        # ===== Save curves =====
+        plt.figure()
+        plt.plot(history["train_loss"], label="Train Loss")
+        plt.plot(history["val_loss"], label="Val Loss")
+        plt.title(f"Loss Curve - {name}")
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
+        plt.legend()
+        plt.savefig(os.path.join(fig_dir, f"loss_curve_{name}.png"))
+        plt.close()
+
+        plt.figure()
+        plt.plot(history["train_acc"], label="Train Acc")
+        plt.plot(history["val_acc"], label="Val Acc")
+        plt.title(f"Accuracy Curve - {name}")
+        plt.xlabel("Epoch")
+        plt.ylabel("Accuracy (%)")
+        plt.legend()
+        plt.savefig(os.path.join(fig_dir, f"accuracy_curve_{name}.png"))
+        plt.close()
+
+
 
     # Eval
     base_model.eval()
@@ -266,7 +324,6 @@ for name, config in configs.items():
     plt.tight_layout()
     plt.savefig(os.path.join(fig_dir, f"confusion_matrix_{name}.png"))
     plt.close()
-    
 # ===============================
 # XAI with LIME
 # ===============================
